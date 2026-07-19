@@ -9,7 +9,7 @@ separately.
 
 ```hcl
 module "gke" {
-  source = "github.com/cybercapybara/terraform-google-gke"
+  source = "github.com/moveeeax/terraform-google-gke"
 
   project_id      = var.project_id
   name            = "prod-cluster"
