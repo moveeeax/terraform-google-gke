@@ -27,7 +27,7 @@ relax, not a default you have to remember to turn on:
 
 ```hcl
 module "gke" {
-  source = "github.com/moveeeax/terraform-google-gke"
+  source = "github.com/moveeeax/terraform-google-gke?ref=v1.0.0"
 
   project_id      = var.project_id
   name            = "prod-cluster"
@@ -56,7 +56,7 @@ A runnable example lives in [`examples/basic`](examples/basic).
 | Name      | Version        |
 |-----------|----------------|
 | terraform | >= 1.5         |
-| google    | >= 5.0, < 8.0  |
+| google    | >= 5.0, < 9.0  |
 
 The test suite under [`tests/`](tests) additionally needs Terraform >= 1.7 for
 `mock_provider`.
