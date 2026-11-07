@@ -30,6 +30,39 @@ variable "subnetwork" {
   default     = null
 }
 
+variable "pods_range_name" {
+  description = "Name of the subnetwork secondary range used for Pod IPs. Set together with services_range_name to make the cluster VPC-native with explicitly planned ranges, which Shared VPC setups need. Null (the default) adds no ip_allocation_policy. ForceNew: setting or changing it on an existing cluster replaces the cluster."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.pods_range_name == null || can(regex("^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$", var.pods_range_name))
+    error_message = "pods_range_name must be a secondary range name: lowercase letters, digits and hyphens, starting with a letter, at most 63 characters."
+  }
+}
+
+variable "services_range_name" {
+  description = "Name of the subnetwork secondary range used for Service ClusterIPs. Set together with pods_range_name. ForceNew: setting or changing it on an existing cluster replaces the cluster."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.services_range_name == null || can(regex("^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$", var.services_range_name))
+    error_message = "services_range_name must be a secondary range name: lowercase letters, digits and hyphens, starting with a letter, at most 63 characters."
+  }
+}
+
+variable "datapath_provider" {
+  description = "Datapath provider: ADVANCED_DATAPATH enables GKE Dataplane V2 (eBPF, with built-in Kubernetes NetworkPolicy enforcement), LEGACY_DATAPATH is the iptables kube-proxy datapath. Null (the default) leaves it to GKE, which uses the legacy datapath. Use ADVANCED_DATAPATH for new clusters. ForceNew: changing it on an existing cluster replaces the cluster."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.datapath_provider == null || contains(["ADVANCED_DATAPATH", "LEGACY_DATAPATH"], var.datapath_provider)
+    error_message = "datapath_provider must be ADVANCED_DATAPATH, LEGACY_DATAPATH or null."
+  }
+}
+
 variable "initial_node_count" {
   description = "Number of nodes created in the default node pool before it is removed."
   type        = number

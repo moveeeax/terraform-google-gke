@@ -82,3 +82,44 @@ run "rejects_zero_initial_node_count" {
 
   expect_failures = [var.initial_node_count]
 }
+
+run "rejects_pods_range_without_services_range" {
+  command = plan
+
+  variables {
+    pods_range_name = "gke-pods"
+  }
+
+  expect_failures = [google_container_cluster.this]
+}
+
+run "rejects_services_range_without_pods_range" {
+  command = plan
+
+  variables {
+    services_range_name = "gke-services"
+  }
+
+  expect_failures = [google_container_cluster.this]
+}
+
+run "rejects_malformed_range_name" {
+  command = plan
+
+  variables {
+    pods_range_name     = "GKE_Pods"
+    services_range_name = "gke-services"
+  }
+
+  expect_failures = [var.pods_range_name]
+}
+
+run "rejects_unknown_datapath_provider" {
+  command = plan
+
+  variables {
+    datapath_provider = "DATAPLANE_V2"
+  }
+
+  expect_failures = [var.datapath_provider]
+}
