@@ -36,6 +36,12 @@ module "gke" {
   subnetwork      = module.subnet.self_link
   release_channel = "REGULAR"
 
+  # VPC-native, with Pod and Service IPs from the subnetwork's own secondary
+  # ranges, and Dataplane V2.
+  pods_range_name     = "gke-pods"
+  services_range_name = "gke-services"
+  datapath_provider   = "ADVANCED_DATAPATH"
+
   master_authorized_networks = [
     {
       cidr_block   = "203.0.113.0/24"
@@ -48,6 +54,26 @@ module "gke" {
   ]
 }
 ```
+
+## Networking: secondary ranges and Dataplane V2
+
+`pods_range_name` and `services_range_name` name two secondary ranges that
+must already exist on `subnetwork`. Set both and the module emits an
+`ip_allocation_policy` with them and pins `networking_mode = "VPC_NATIVE"`, so
+Pod and Service addresses come from ranges you planned with the VPC rather than
+ones GKE picks. In a Shared VPC the ranges live on the host project's subnet.
+Setting only one of the two fails at plan time.
+
+`datapath_provider = "ADVANCED_DATAPATH"` turns on GKE Dataplane V2, which
+enforces Kubernetes NetworkPolicy without a separate Calico add-on.
+`LEGACY_DATAPATH` is the iptables/kube-proxy datapath.
+
+All three settings are ForceNew in the google provider. Their defaults are
+`null`, so the module adds nothing to clusters created by earlier versions and
+their plans stay empty. Setting them on an existing cluster whose current value
+differs replaces the cluster, which `deletion_protection = true` stops at
+apply time. Set them when creating a cluster, and use `ADVANCED_DATAPATH` for
+new clusters.
 
 A runnable example lives in [`examples/basic`](examples/basic).
 
@@ -70,6 +96,9 @@ The test suite under [`tests/`](tests) additionally needs Terraform >= 1.7 for
 | `location`                   | Region or zone in which to create the cluster.                                 | `string`                                                    | n/a         |   yes    |
 | `network`                    | Self link or name of the network.                                              | `string`                                                    | `"default"` |    no    |
 | `subnetwork`                 | Self link or name of the subnetwork.                                           | `string`                                                    | `null`      |    no    |
+| `pods_range_name`            | Subnetwork secondary range for Pod IPs. Set with `services_range_name`. ForceNew. | `string`                                                 | `null`      |    no    |
+| `services_range_name`        | Subnetwork secondary range for Service IPs. Set with `pods_range_name`. ForceNew. | `string`                                                 | `null`      |    no    |
+| `datapath_provider`          | `ADVANCED_DATAPATH` (Dataplane V2) or `LEGACY_DATAPATH`. Null leaves GKE's default. ForceNew. | `string`                                     | `null`      |    no    |
 | `initial_node_count`         | Nodes in the default node pool before removal.                                 | `number`                                                    | `1`         |    no    |
 | `remove_default_node_pool`   | Whether to remove the default node pool.                                       | `bool`                                                      | `true`      |    no    |
 | `deletion_protection`        | Whether the cluster is protected from deletion.                                | `bool`                                                      | `true`      |    no    |

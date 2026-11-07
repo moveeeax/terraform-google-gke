@@ -96,3 +96,38 @@ run "workload_identity_can_be_disabled" {
     error_message = "enable_workload_identity = false must drop the workload_identity_config block."
   }
 }
+
+run "secondary_ranges_make_the_cluster_vpc_native" {
+  variables {
+    pods_range_name     = "gke-pods"
+    services_range_name = "gke-services"
+  }
+
+  assert {
+    condition     = google_container_cluster.this.ip_allocation_policy[0].cluster_secondary_range_name == "gke-pods"
+    error_message = "pods_range_name must reach ip_allocation_policy.cluster_secondary_range_name."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.ip_allocation_policy[0].services_secondary_range_name == "gke-services"
+    error_message = "services_range_name must reach ip_allocation_policy.services_secondary_range_name."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.networking_mode == "VPC_NATIVE"
+    error_message = "Named secondary ranges only work on a VPC-native cluster."
+  }
+}
+
+run "dataplane_v2_can_be_enabled" {
+  variables {
+    pods_range_name     = "gke-pods"
+    services_range_name = "gke-services"
+    datapath_provider   = "ADVANCED_DATAPATH"
+  }
+
+  assert {
+    condition     = google_container_cluster.this.datapath_provider == "ADVANCED_DATAPATH"
+    error_message = "datapath_provider must be passed through to the cluster."
+  }
+}

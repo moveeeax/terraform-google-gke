@@ -25,6 +25,16 @@ module "gke" {
   # empty would deny all external access, including your own kubectl.
   master_authorized_networks = var.api_access_cidrs
 
+  # Dataplane V2. Only settable at creation: changing it later replaces the
+  # cluster.
+  datapath_provider = "ADVANCED_DATAPATH"
+
+  # Optional named secondary ranges on the subnetwork, set as a pair. Null on
+  # both lets GKE allocate the ranges.
+  subnetwork          = var.subnetwork
+  pods_range_name     = var.pods_range_name
+  services_range_name = var.services_range_name
+
   # Sandbox cluster, so allow terraform destroy to remove it.
   deletion_protection = false
 
@@ -42,6 +52,24 @@ variable "region" {
   description = "Region for the google provider and cluster."
   type        = string
   default     = "us-central1"
+}
+
+variable "subnetwork" {
+  description = "Subnetwork the cluster runs in. Must carry the secondary ranges named below when they are set."
+  type        = string
+  default     = null
+}
+
+variable "pods_range_name" {
+  description = "Secondary range on the subnetwork for Pod IPs."
+  type        = string
+  default     = null
+}
+
+variable "services_range_name" {
+  description = "Secondary range on the subnetwork for Service IPs."
+  type        = string
+  default     = null
 }
 
 variable "api_access_cidrs" {

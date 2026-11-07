@@ -1,3 +1,9 @@
+locals {
+  # Secondary ranges are passed as a pair; the precondition on the cluster
+  # rejects setting only one of them.
+  use_secondary_ranges = var.pods_range_name != null && var.services_range_name != null
+}
+
 resource "google_container_cluster" "this" {
   project    = var.project_id
   name       = var.name
@@ -15,6 +21,24 @@ resource "google_container_cluster" "this" {
   # on them.
   enable_legacy_abac    = false
   enable_shielded_nodes = true
+
+  # Both are ForceNew. Null leaves the provider and GKE defaults in place, so an
+  # existing cluster sees no diff; setting either on a running cluster whose
+  # value differs replaces it.
+  datapath_provider = var.datapath_provider
+  networking_mode   = local.use_secondary_ranges ? "VPC_NATIVE" : null
+
+  # Pod and Service IPs come from named secondary ranges of the subnetwork, so
+  # the ranges are planned with the VPC (and visible to a Shared VPC host)
+  # instead of GKE carving its own. Omitted when no ranges are given, which
+  # keeps existing clusters unchanged: ip_allocation_policy is ForceNew.
+  dynamic "ip_allocation_policy" {
+    for_each = local.use_secondary_ranges ? [1] : []
+    content {
+      cluster_secondary_range_name  = var.pods_range_name
+      services_secondary_range_name = var.services_range_name
+    }
+  }
 
   release_channel {
     channel = var.release_channel
@@ -46,6 +70,13 @@ resource "google_container_cluster" "this" {
     for_each = var.enable_workload_identity ? [1] : []
     content {
       workload_pool = "${var.project_id}.svc.id.goog"
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = (var.pods_range_name == null) == (var.services_range_name == null)
+      error_message = "pods_range_name and services_range_name must be set together: both name secondary ranges of the cluster's subnetwork."
     }
   }
 }
