@@ -7,6 +7,8 @@ file; see the [GitHub releases](https://github.com/moveeeax/terraform-google-gke
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-08
+
 ### Added
 
 - `enable_autopilot` input (default `false`) to create a GKE Autopilot cluster.
@@ -38,5 +40,6 @@ file; see the [GitHub releases](https://github.com/moveeeax/terraform-google-gke
   diff. They are ForceNew: setting them on an existing cluster whose value
   differs replaces the cluster.
 
-[Unreleased]: https://github.com/moveeeax/terraform-google-gke/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/moveeeax/terraform-google-gke/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/moveeeax/terraform-google-gke/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/moveeeax/terraform-google-gke/compare/v1.1.0...v1.2.0
