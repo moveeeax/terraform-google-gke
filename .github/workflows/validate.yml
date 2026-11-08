@@ -38,3 +38,9 @@ jobs:
         run: |
           tofu init -backend=false
           tofu validate
+
+      - name: validate autopilot example
+        working-directory: examples/autopilot
+        run: |
+          tofu init -backend=false
+          tofu validate
