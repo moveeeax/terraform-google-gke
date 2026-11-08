@@ -75,7 +75,37 @@ differs replaces the cluster, which `deletion_protection = true` stops at
 apply time. Set them when creating a cluster, and use `ADVANCED_DATAPATH` for
 new clusters.
 
-A runnable example lives in [`examples/basic`](examples/basic).
+## Autopilot
+
+`enable_autopilot = true` creates a GKE Autopilot cluster, where GKE creates
+and manages the nodes instead of you managing node pools. The default is `false`, so existing Standard clusters are untouched.
+`enable_autopilot` is ForceNew, so switching an existing cluster either way
+replaces it; pick the mode when you create the cluster. For new clusters that
+do not need custom node pools, Autopilot is the recommended starting point.
+
+Several inputs do not apply to Autopilot. The module rejects these at plan time
+when `enable_autopilot = true`:
+
+| Rejected with Autopilot | Why |
+|---|---|
+| `initial_node_count` or `remove_default_node_pool` set to anything but `null` | Autopilot manages nodes itself; the provider rejects `remove_default_node_pool` next to `enable_autopilot`. |
+| `enable_workload_identity = false` | Workload Identity Federation is always on in Autopilot and cannot be disabled. |
+| `release_channel = "UNSPECIFIED"` | Autopilot clusters must be enrolled in a release channel. |
+
+On Autopilot the module also leaves `enable_shielded_nodes` and
+`workload_identity_config` unset: Shielded GKE Nodes and the
+`<project_id>.svc.id.goog` workload pool are pre-configured by Autopilot, and
+the provider rejects these arguments next to `enable_autopilot` (in 5.x for
+`workload_identity_config`). Private nodes, authorized networks, secondary
+ranges and `datapath_provider` work the same as on Standard; Autopilot enables
+Dataplane V2 on new clusters on its own. Do not attach
+`google_container_node_pool` resources to an Autopilot cluster.
+
+See the [Autopilot and Standard feature
+comparison](https://cloud.google.com/kubernetes-engine/docs/resources/autopilot-standard-feature-comparison).
+
+Runnable examples live in [`examples/basic`](examples/basic) (Standard) and
+[`examples/autopilot`](examples/autopilot).
 
 ## Requirements
 
@@ -99,8 +129,9 @@ The test suite under [`tests/`](tests) additionally needs Terraform >= 1.7 for
 | `pods_range_name`            | Subnetwork secondary range for Pod IPs. Set with `services_range_name`. ForceNew. | `string`                                                 | `null`      |    no    |
 | `services_range_name`        | Subnetwork secondary range for Service IPs. Set with `pods_range_name`. ForceNew. | `string`                                                 | `null`      |    no    |
 | `datapath_provider`          | `ADVANCED_DATAPATH` (Dataplane V2) or `LEGACY_DATAPATH`. Null leaves GKE's default. ForceNew. | `string`                                     | `null`      |    no    |
-| `initial_node_count`         | Nodes in the default node pool before removal.                                 | `number`                                                    | `1`         |    no    |
-| `remove_default_node_pool`   | Whether to remove the default node pool.                                       | `bool`                                                      | `true`      |    no    |
+| `enable_autopilot`           | Create an Autopilot cluster. ForceNew. See [Autopilot](#autopilot).            | `bool`                                                      | `false`     |    no    |
+| `initial_node_count`         | Nodes in the default node pool before removal. Null means 1 on Standard; must be null on Autopilot. | `number`                               | `null`      |    no    |
+| `remove_default_node_pool`   | Whether to remove the default node pool. Null means `true` on Standard; must be null on Autopilot. | `bool`                                  | `null`      |    no    |
 | `deletion_protection`        | Whether the cluster is protected from deletion.                                | `bool`                                                      | `true`      |    no    |
 | `release_channel`            | Release channel for cluster upgrades.                                          | `string`                                                    | `"REGULAR"` |    no    |
 | `master_authorized_networks` | CIDR blocks allowed to reach the API server. Empty denies all external access. | `list(object({ cidr_block = string, display_name = optional(string) }))` | `[]` | no |

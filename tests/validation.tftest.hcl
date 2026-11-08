@@ -123,3 +123,47 @@ run "rejects_unknown_datapath_provider" {
 
   expect_failures = [var.datapath_provider]
 }
+
+run "rejects_initial_node_count_on_autopilot" {
+  command = plan
+
+  variables {
+    enable_autopilot   = true
+    initial_node_count = 1
+  }
+
+  expect_failures = [google_container_cluster.this]
+}
+
+run "rejects_remove_default_node_pool_on_autopilot" {
+  command = plan
+
+  variables {
+    enable_autopilot         = true
+    remove_default_node_pool = true
+  }
+
+  expect_failures = [google_container_cluster.this]
+}
+
+run "rejects_disabled_workload_identity_on_autopilot" {
+  command = plan
+
+  variables {
+    enable_autopilot         = true
+    enable_workload_identity = false
+  }
+
+  expect_failures = [google_container_cluster.this]
+}
+
+run "rejects_unspecified_release_channel_on_autopilot" {
+  command = plan
+
+  variables {
+    enable_autopilot = true
+    release_channel  = "UNSPECIFIED"
+  }
+
+  expect_failures = [google_container_cluster.this]
+}

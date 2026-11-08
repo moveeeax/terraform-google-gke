@@ -63,21 +63,28 @@ variable "datapath_provider" {
   }
 }
 
+variable "enable_autopilot" {
+  description = "Create a GKE Autopilot cluster, where Google manages nodes and node pools. Cannot be combined with initial_node_count, remove_default_node_pool, enable_workload_identity = false or release_channel = \"UNSPECIFIED\". ForceNew: changing it on an existing cluster replaces the cluster."
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
 variable "initial_node_count" {
-  description = "Number of nodes created in the default node pool before it is removed."
+  description = "Number of nodes created in the default node pool before it is removed. Null (the default) means 1 on Standard clusters. Must stay null when enable_autopilot is true."
   type        = number
-  default     = 1
+  default     = null
 
   validation {
-    condition     = var.initial_node_count >= 1
+    condition     = var.initial_node_count == null || try(var.initial_node_count >= 1, false)
     error_message = "initial_node_count must be at least 1."
   }
 }
 
 variable "remove_default_node_pool" {
-  description = "Whether to remove the default node pool after cluster creation."
+  description = "Whether to remove the default node pool after cluster creation. Null (the default) means true on Standard clusters. Must stay null when enable_autopilot is true."
   type        = bool
-  default     = true
+  default     = null
 }
 
 variable "deletion_protection" {

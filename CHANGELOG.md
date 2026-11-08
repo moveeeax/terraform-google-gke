@@ -7,6 +7,24 @@ file; see the [GitHub releases](https://github.com/moveeeax/terraform-google-gke
 
 ## [Unreleased]
 
+### Added
+
+- `enable_autopilot` input (default `false`) to create a GKE Autopilot cluster.
+  It is ForceNew and null when off, so existing clusters see no diff. With
+  Autopilot on, the module leaves `initial_node_count`,
+  `remove_default_node_pool`, `enable_shielded_nodes` and
+  `workload_identity_config` unset, and rejects at plan time
+  `initial_node_count`, `remove_default_node_pool`,
+  `enable_workload_identity = false` and `release_channel = "UNSPECIFIED"`.
+- `examples/autopilot`.
+
+### Changed
+
+- `initial_node_count` and `remove_default_node_pool` now default to `null`
+  instead of `1` and `true`. On Standard clusters null still resolves to `1`
+  and `true`, so plans do not change; the null default lets the module tell an
+  explicit value apart on Autopilot.
+
 ## [1.2.0] - 2026-11-07
 
 ### Added

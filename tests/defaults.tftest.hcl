@@ -131,3 +131,77 @@ run "dataplane_v2_can_be_enabled" {
     error_message = "datapath_provider must be passed through to the cluster."
   }
 }
+
+# enable_autopilot and initial_node_count are ForceNew. Upgrading the module
+# must leave the plan of an existing Standard cluster unchanged.
+run "standard_cluster_plan_is_unchanged" {
+  assert {
+    condition     = google_container_cluster.this.enable_autopilot == null
+    error_message = "enable_autopilot must stay unset by default; it is ForceNew."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.initial_node_count == 1
+    error_message = "initial_node_count must still default to 1 on Standard clusters."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.remove_default_node_pool == true
+    error_message = "remove_default_node_pool must still default to true on Standard clusters."
+  }
+}
+
+run "standard_node_pool_inputs_are_passed_through" {
+  variables {
+    initial_node_count       = 3
+    remove_default_node_pool = false
+  }
+
+  assert {
+    condition     = google_container_cluster.this.initial_node_count == 3
+    error_message = "An explicit initial_node_count must reach the cluster."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.remove_default_node_pool == false
+    error_message = "An explicit remove_default_node_pool = false must reach the cluster."
+  }
+}
+
+run "autopilot_cluster" {
+  variables {
+    enable_autopilot    = true
+    pods_range_name     = "gke-pods"
+    services_range_name = "gke-services"
+  }
+
+  assert {
+    condition     = google_container_cluster.this.enable_autopilot == true
+    error_message = "enable_autopilot = true must reach the cluster."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.initial_node_count == null && google_container_cluster.this.remove_default_node_pool == null
+    error_message = "Node pool arguments must be left unset on Autopilot; the provider rejects remove_default_node_pool there."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.enable_shielded_nodes == null
+    error_message = "enable_shielded_nodes conflicts with enable_autopilot in the provider and must be left unset."
+  }
+
+  assert {
+    condition     = length(google_container_cluster.this.workload_identity_config) == 0
+    error_message = "workload_identity_config must be omitted on Autopilot; GKE binds the workload pool itself and provider 5.x rejects the block."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.private_cluster_config[0].enable_private_nodes && length(google_container_cluster.this.master_authorized_networks_config) == 1
+    error_message = "Private nodes and the authorized networks block must still apply on Autopilot."
+  }
+
+  assert {
+    condition     = google_container_cluster.this.ip_allocation_policy[0].cluster_secondary_range_name == "gke-pods"
+    error_message = "Secondary ranges must still work on Autopilot."
+  }
+}

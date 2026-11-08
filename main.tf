@@ -11,16 +11,25 @@ resource "google_container_cluster" "this" {
   network    = var.network
   subnetwork = var.subnetwork
 
-  initial_node_count       = var.initial_node_count
-  remove_default_node_pool = var.remove_default_node_pool
+  # ForceNew. Null when off, so clusters created by earlier versions of the
+  # module see no diff.
+  enable_autopilot = var.enable_autopilot ? true : null
+
+  # Autopilot creates and sizes nodes itself, and the provider marks
+  # remove_default_node_pool as conflicting with enable_autopilot. Both are
+  # left unset on Autopilot; a precondition below rejects them if the caller
+  # sets them.
+  initial_node_count       = var.enable_autopilot ? null : coalesce(var.initial_node_count, 1)
+  remove_default_node_pool = var.enable_autopilot ? null : coalesce(var.remove_default_node_pool, true)
   deletion_protection      = var.deletion_protection
   resource_labels          = var.resource_labels
 
   # Both match the current provider defaults. Pinning them means a future
   # provider release cannot quietly flip them, and the test suite can assert
-  # on them.
+  # on them. Autopilot always runs Shielded GKE Nodes, and the provider rejects
+  # enable_shielded_nodes next to enable_autopilot, so it is left unset there.
   enable_legacy_abac    = false
-  enable_shielded_nodes = true
+  enable_shielded_nodes = var.enable_autopilot ? null : true
 
   # Both are ForceNew. Null leaves the provider and GKE defaults in place, so an
   # existing cluster sees no diff; setting either on a running cluster whose
@@ -66,8 +75,11 @@ resource "google_container_cluster" "this" {
 
   # Without a workload pool every pod can reach the node's service account
   # through the metadata server and inherits all of its permissions.
+  # Autopilot always binds the project's workload pool itself, and google
+  # provider 5.x rejects workload_identity_config next to enable_autopilot, so
+  # the block is only emitted on Standard clusters.
   dynamic "workload_identity_config" {
-    for_each = var.enable_workload_identity ? [1] : []
+    for_each = var.enable_workload_identity && !var.enable_autopilot ? [1] : []
     content {
       workload_pool = "${var.project_id}.svc.id.goog"
     }
@@ -77,6 +89,21 @@ resource "google_container_cluster" "this" {
     precondition {
       condition     = (var.pods_range_name == null) == (var.services_range_name == null)
       error_message = "pods_range_name and services_range_name must be set together: both name secondary ranges of the cluster's subnetwork."
+    }
+
+    precondition {
+      condition     = !var.enable_autopilot || (var.initial_node_count == null && var.remove_default_node_pool == null)
+      error_message = "initial_node_count and remove_default_node_pool cannot be set when enable_autopilot is true: Autopilot creates and sizes nodes itself."
+    }
+
+    precondition {
+      condition     = !var.enable_autopilot || var.enable_workload_identity
+      error_message = "enable_workload_identity cannot be false when enable_autopilot is true: Workload Identity Federation is always on in Autopilot clusters."
+    }
+
+    precondition {
+      condition     = !var.enable_autopilot || var.release_channel != "UNSPECIFIED"
+      error_message = "release_channel cannot be UNSPECIFIED when enable_autopilot is true: Autopilot clusters must be enrolled in a release channel."
     }
   }
 }
